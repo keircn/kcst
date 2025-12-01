@@ -8,26 +8,30 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/keircn/kcst/internal/storage"
 )
 
 type Store struct {
 	dir string
+	db  *storage.DB
 }
 
-func NewStore(dir string) (*Store, error) {
+func NewStore(dir string, db *storage.DB) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	return &Store{dir: dir}, nil
+	return &Store{dir: dir, db: db}, nil
 }
 
-func (s *Store) Save(file multipart.File, originalName string) (string, error) {
+func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string, error) {
 	randName, err := generateRandomName()
 	if err != nil {
 		return "", err
 	}
 
-	ext := getExtension(originalName)
+	ext := getExtension(header.Filename)
 	filename := randName + ext
 
 	dst, err := os.Create(filepath.Join(s.dir, filename))
@@ -36,7 +40,20 @@ func (s *Store) Save(file multipart.File, originalName string) (string, error) {
 	}
 	defer dst.Close()
 
-	if _, err := io.Copy(dst, file); err != nil {
+	size, err := io.Copy(dst, file)
+	if err != nil {
+		return "", err
+	}
+
+	meta := &storage.FileMetadata{
+		ID:           randName,
+		OriginalName: header.Filename,
+		StoredName:   filename,
+		Size:         size,
+		ContentType:  header.Header.Get("Content-Type"),
+		UploadedAt:   time.Now(),
+	}
+	if err := s.db.SaveMetadata(meta); err != nil {
 		return "", err
 	}
 

@@ -57,7 +57,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	filename, err := h.store.Save(file, header.Filename)
+	filename, err := h.store.Save(file, header)
 	if err != nil {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return
