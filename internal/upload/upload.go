@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -58,6 +59,52 @@ func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string,
 	}
 
 	return filename, nil
+}
+
+func (s *Store) Cleanup() error {
+	expired, err := s.db.GetExpired()
+	if err != nil {
+		return err
+	}
+
+	for _, meta := range expired {
+		filePath := filepath.Join(s.dir, meta.StoredName)
+		if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+			log.Printf("Failed to remove expired file %s: %v", filePath, err)
+			continue
+		}
+
+		if err := s.db.DeleteMetadata(meta.ID); err != nil {
+			log.Printf("Failed to delete metadata for %s: %v", meta.ID, err)
+			continue
+		}
+
+		log.Printf("Cleaned up expired file: %s (size: %d, uploaded: %s)",
+			meta.StoredName, meta.Size, meta.UploadedAt.Format(time.RFC3339))
+	}
+
+	return nil
+}
+
+func (s *Store) StartCleanupRoutine(stop <-chan struct{}) {
+	ticker := time.NewTicker(1 * time.Hour)
+	go func() {
+		if err := s.Cleanup(); err != nil {
+			log.Printf("Cleanup error: %v", err)
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.Cleanup(); err != nil {
+					log.Printf("Cleanup error: %v", err)
+				}
+			case <-stop:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 func generateRandomName() (string, error) {

@@ -2,10 +2,17 @@ package storage
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+)
+
+const (
+	MaxFileSize = 100 * 1024 * 1024
+	MinTTL      = 1 * time.Hour
+	MaxTTL      = 28 * 24 * time.Hour
 )
 
 type FileMetadata struct {
@@ -15,6 +22,32 @@ type FileMetadata struct {
 	Size         int64     `json:"size"`
 	ContentType  string    `json:"content_type"`
 	UploadedAt   time.Time `json:"uploaded_at"`
+}
+
+func (f *FileMetadata) ExpiresAt() time.Time {
+	ttl := CalculateTTL(f.Size)
+	return f.UploadedAt.Add(ttl)
+}
+
+func (f *FileMetadata) IsExpired() bool {
+	return time.Now().After(f.ExpiresAt())
+}
+
+// TTL = MinTTL + (MaxTTL - MinTTL) * (1 - (size/maxSize)^0.5)
+func CalculateTTL(size int64) time.Duration {
+	if size <= 0 {
+		return MaxTTL
+	}
+	if size >= MaxFileSize {
+		return MinTTL
+	}
+
+	ratio := float64(size) / float64(MaxFileSize)
+	factor := 1 - math.Sqrt(ratio)
+	ttlRange := float64(MaxTTL - MinTTL)
+	ttl := MinTTL + time.Duration(factor*ttlRange)
+
+	return ttl
 }
 
 type DB struct {
@@ -92,4 +125,25 @@ func (d *DB) ListMetadata() ([]*FileMetadata, error) {
 		results = append(results, meta)
 	}
 	return results, nil
+}
+
+func (d *DB) DeleteMetadata(id string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	delete(d.data, id)
+	return d.save()
+}
+
+func (d *DB) GetExpired() ([]*FileMetadata, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	var expired []*FileMetadata
+	for _, meta := range d.data {
+		if meta.IsExpired() {
+			expired = append(expired, meta)
+		}
+	}
+	return expired, nil
 }

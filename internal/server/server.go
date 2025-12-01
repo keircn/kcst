@@ -10,10 +10,12 @@ import (
 )
 
 type Server struct {
-	addr   string
-	mux    *http.ServeMux
-	server *http.Server
-	db     *storage.DB
+	addr        string
+	mux         *http.ServeMux
+	server      *http.Server
+	db          *storage.DB
+	store       *upload.Store
+	stopCleanup chan struct{}
 }
 
 func New(addr, uploadDir, dbPath string) (*Server, error) {
@@ -35,9 +37,11 @@ func New(addr, uploadDir, dbPath string) (*Server, error) {
 	mux.HandleFunc("/", h.Root)
 
 	return &Server{
-		addr: addr,
-		mux:  mux,
-		db:   db,
+		addr:        addr,
+		mux:         mux,
+		db:          db,
+		store:       store,
+		stopCleanup: make(chan struct{}),
 		server: &http.Server{
 			Addr:    addr,
 			Handler: mux,
@@ -46,9 +50,13 @@ func New(addr, uploadDir, dbPath string) (*Server, error) {
 }
 
 func (s *Server) Run() error {
+	s.store.StartCleanupRoutine(s.stopCleanup)
+
 	return s.server.ListenAndServe()
 }
 
 func (s *Server) Close() error {
+	close(s.stopCleanup)
+
 	return s.db.Close()
 }
