@@ -33,9 +33,16 @@ func (h *Handler) Root(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
+
 	data := models.PageData{
-		Title:   "skibidi",
-		Message: "sigma sigma",
+		Title:   "KCST",
+		Message: "Temporary file hosting.",
+		BaseURL: baseURL,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
