@@ -1,23 +1,38 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/keircn/kcst/internal/models"
 	"github.com/keircn/kcst/internal/templates"
+	"github.com/keircn/kcst/internal/upload"
 )
 
 type Handler struct {
 	templates *templates.Templates
+	store     *upload.Store
 }
 
-func New(t *templates.Templates) *Handler {
+func New(t *templates.Templates, s *upload.Store) *Handler {
 	return &Handler{
 		templates: t,
+		store:     s,
 	}
 }
 
-func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Root(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.home(w, r)
+	case http.MethodPost:
+		h.upload(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
 	data := models.PageData{
 		Title:   "skibidi",
 		Message: "sigma sigma",
@@ -27,4 +42,27 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.RenderPage(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Failed to get file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	filename, err := h.store.Save(file, header.Filename)
+	if err != nil {
+		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, "%s\n", filename)
 }

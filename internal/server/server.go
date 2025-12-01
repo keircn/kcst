@@ -5,6 +5,7 @@ import (
 
 	"github.com/keircn/kcst/internal/handlers"
 	"github.com/keircn/kcst/internal/templates"
+	"github.com/keircn/kcst/internal/upload"
 )
 
 type Server struct {
@@ -13,13 +14,15 @@ type Server struct {
 	server *http.Server
 }
 
-func New(addr string) *Server {
+func New(addr, uploadDir string) (*Server, error) {
 	mux := http.NewServeMux()
-
 	tmpl := templates.New()
-	h := handlers.New(tmpl)
-
-	mux.HandleFunc("/", h.Home)
+	store, err := upload.NewStore(uploadDir)
+	if err != nil {
+		return nil, err
+	}
+	h := handlers.New(tmpl, store)
+	mux.HandleFunc("/", h.Root)
 
 	return &Server{
 		addr: addr,
@@ -28,7 +31,7 @@ func New(addr string) *Server {
 			Addr:    addr,
 			Handler: mux,
 		},
-	}
+	}, nil
 }
 
 func (s *Server) Run() error {

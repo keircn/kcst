@@ -7,7 +7,10 @@ import (
 )
 
 func main() {
-	srv := server.New(":8080")
+	srv, err := server.New(":8080", "./uploads")
+	if err != nil {
+		log.Fatalf("Failed to create server: %v", err)
+	}
 	log.Println("Server starting on :8080")
 	log.Fatal(srv.Run())
 }
