@@ -9,11 +9,25 @@ import (
 	"time"
 )
 
-const (
-	MaxFileSize = 100 * 1024 * 1024
-	MinTTL      = 1 * time.Hour
-	MaxTTL      = 28 * 24 * time.Hour
-)
+type RetentionConfig struct {
+	MinTTL      time.Duration
+	MaxTTL      time.Duration
+	MaxFileSize int64
+}
+
+func DefaultRetention() RetentionConfig {
+	return RetentionConfig{
+		MinTTL:      1 * time.Hour,
+		MaxTTL:      28 * 24 * time.Hour,
+		MaxFileSize: 100 * 1024 * 1024,
+	}
+}
+
+var retention = DefaultRetention()
+
+func SetRetention(cfg RetentionConfig) {
+	retention = cfg
+}
 
 type FileMetadata struct {
 	ID           string    `json:"id"`
@@ -33,19 +47,19 @@ func (f *FileMetadata) IsExpired() bool {
 	return time.Now().After(f.ExpiresAt())
 }
 
-// TTL = MinTTL + (MaxTTL - MinTTL) * (1 - (size/maxSize)^0.5)
+// TTL = MinTTL + (MaxTTL - MinTTL) * (1 - sqrt(size/maxSize))
 func CalculateTTL(size int64) time.Duration {
 	if size <= 0 {
-		return MaxTTL
+		return retention.MaxTTL
 	}
-	if size >= MaxFileSize {
-		return MinTTL
+	if size >= retention.MaxFileSize {
+		return retention.MinTTL
 	}
 
-	ratio := float64(size) / float64(MaxFileSize)
+	ratio := float64(size) / float64(retention.MaxFileSize)
 	factor := 1 - math.Sqrt(ratio)
-	ttlRange := float64(MaxTTL - MinTTL)
-	ttl := MinTTL + time.Duration(factor*ttlRange)
+	ttlRange := float64(retention.MaxTTL - retention.MinTTL)
+	ttl := retention.MinTTL + time.Duration(factor*ttlRange)
 
 	return ttl
 }

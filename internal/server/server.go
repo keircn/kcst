@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/keircn/kcst/internal/config"
 	"github.com/keircn/kcst/internal/handlers"
 	"github.com/keircn/kcst/internal/storage"
 	"github.com/keircn/kcst/internal/templates"
@@ -18,16 +19,22 @@ type Server struct {
 	stopCleanup chan struct{}
 }
 
-func New(addr, uploadDir, dbPath string) (*Server, error) {
+func New(cfg *config.Config) (*Server, error) {
 	mux := http.NewServeMux()
 
-	db, err := storage.Open(dbPath)
+	storage.SetRetention(storage.RetentionConfig{
+		MinTTL:      cfg.Retention.MinTTL,
+		MaxTTL:      cfg.Retention.MaxTTL,
+		MaxFileSize: cfg.Retention.MaxFileSize,
+	})
+
+	db, err := storage.Open(cfg.Storage.DBPath)
 	if err != nil {
 		return nil, err
 	}
 
 	tmpl := templates.New()
-	store, err := upload.NewStore(uploadDir, db)
+	store, err := upload.NewStore(cfg.Storage.UploadDir, db, cfg.Retention.CleanupInterval)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -37,13 +44,13 @@ func New(addr, uploadDir, dbPath string) (*Server, error) {
 	mux.HandleFunc("/", h.Root)
 
 	return &Server{
-		addr:        addr,
+		addr:        cfg.Server.Address,
 		mux:         mux,
 		db:          db,
 		store:       store,
 		stopCleanup: make(chan struct{}),
 		server: &http.Server{
-			Addr:    addr,
+			Addr:    cfg.Server.Address,
 			Handler: mux,
 		},
 	}, nil
@@ -51,12 +58,10 @@ func New(addr, uploadDir, dbPath string) (*Server, error) {
 
 func (s *Server) Run() error {
 	s.store.StartCleanupRoutine(s.stopCleanup)
-
 	return s.server.ListenAndServe()
 }
 
 func (s *Server) Close() error {
 	close(s.stopCleanup)
-
 	return s.db.Close()
 }

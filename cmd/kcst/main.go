@@ -1,17 +1,28 @@
 package main
 
 import (
+	"flag"
 	"log"
 
+	"github.com/keircn/kcst/internal/config"
 	"github.com/keircn/kcst/internal/server"
 )
 
 func main() {
-	srv, err := server.New(":8080", "./uploads", "./data/kcst.db")
+	configPath := flag.String("config", "config.toml", "path to config file")
+	flag.Parse()
+
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	srv, err := server.New(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 	defer srv.Close()
-	log.Println("Server starting on :8080")
+
+	log.Printf("Server starting on %s", cfg.Server.Address)
 	log.Fatal(srv.Run())
 }

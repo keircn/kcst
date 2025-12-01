@@ -1,0 +1,26 @@
+# KCST Configuration Example
+# Copy this file to config.toml and modify as needed.
+
+[server]
+# Address to listen on (default: ":8080")
+address = ":8080"
+
+[storage]
+# Directory to store uploaded files (default: "./uploads")
+upload_dir = "./uploads"
+
+# Path to the metadata database file (default: "./data/kcst.db")
+db_path = "./data/kcst.db"
+
+[retention]
+# Minimum TTL for largest files (default: "1h")
+min_ttl = "1h"
+
+# Maximum TTL for smallest files (default: "28d")
+max_ttl = "28d"
+
+# Maximum allowed file size (default: "100MiB")
+max_file_size = "100MiB"
+
+# How often to run the cleanup routine (default: "1h")
+cleanup_interval = "1h"

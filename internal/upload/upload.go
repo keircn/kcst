@@ -15,15 +15,16 @@ import (
 )
 
 type Store struct {
-	dir string
-	db  *storage.DB
+	dir             string
+	db              *storage.DB
+	cleanupInterval time.Duration
 }
 
-func NewStore(dir string, db *storage.DB) (*Store, error) {
+func NewStore(dir string, db *storage.DB, cleanupInterval time.Duration) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	return &Store{dir: dir, db: db}, nil
+	return &Store{dir: dir, db: db, cleanupInterval: cleanupInterval}, nil
 }
 
 func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string, error) {
@@ -87,7 +88,7 @@ func (s *Store) Cleanup() error {
 }
 
 func (s *Store) StartCleanupRoutine(stop <-chan struct{}) {
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(s.cleanupInterval)
 	go func() {
 		if err := s.Cleanup(); err != nil {
 			log.Printf("Cleanup error: %v", err)
