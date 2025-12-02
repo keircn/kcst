@@ -130,6 +130,18 @@ func (d *DB) GetMetadata(id string) (*FileMetadata, error) {
 	return meta, nil
 }
 
+func (d *DB) GetMetadataByStoredName(storedName string) (*FileMetadata, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	for _, meta := range d.data {
+		if meta.StoredName == storedName {
+			return meta, nil
+		}
+	}
+	return nil, nil
+}
+
 func (d *DB) ListMetadata() ([]*FileMetadata, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
