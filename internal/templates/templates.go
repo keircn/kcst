@@ -89,7 +89,7 @@ const pageTemplate = `<!DOCTYPE html>
 
     <h2>Retention Policy</h2>
     <pre class="ascii-art">
-min_age  = 1 hour
+min_age  = 3 hours
 max_age  = 28 days
 max_size = 100 MiB
 
@@ -110,7 +110,7 @@ retention = min_age + (max_age - min_age) * (1 - sqrt(size/max_size))
                                                          MiB
     </pre>
 
-    <p>Smaller files are retained longer. A 100 MiB file lives ~1 hour, while tiny files can stay up to 28 days.</p>
+    <p>Smaller files are retained longer. A 100 MiB file lives ~3 hours, while tiny files can stay up to 28 days.</p>
 
     <h2>Uploading Files</h2>
     <p>Send a <code>POST</code> request with <code>multipart/form-data</code> containing a <code>file</code> field.</p>
@@ -143,7 +143,7 @@ curl -F 'file=@localfile.bin;filename=custom.bin' {{.BaseURL}}</code></pre>
         </tr>
         <tr>
             <td>100 MiB</td>
-            <td>~1 hour</td>
+            <td>~3 hours</td>
         </tr>
         <tr>
             <td>50 MiB</td>

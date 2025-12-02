@@ -5,7 +5,7 @@ Temporary file hosting.
 ## Retention Policy
 
 ```
-min_age  = 1 hour
+min_age  = 3 hours
 max_age  = 28 days
 max_size = 100 MiB
 
@@ -26,7 +26,7 @@ retention = min_age + (max_age - min_age) * (1 - sqrt(size/max_size))
                                                          MiB
 ```
 
-Smaller files are retained longer. A 100 MiB file lives ~1 hour, while tiny files can stay up to 28 days.
+Smaller files are retained longer. A 100 MiB file lives ~3 hours, while tiny files can stay up to 28 days.
 
 ## Uploading Files
 
@@ -53,7 +53,7 @@ curl -F 'file=@localfile.bin;filename=custom.bin' https://example.com
 
 | File Size | Retention |
 |-----------|-----------|
-| 100 MiB   | ~1 hour   |
+| 100 MiB   | ~3 hours   |
 | 50 MiB    | ~9 days   |
 | 25 MiB    | ~14 days  |
 | 10 MiB    | ~19 days  |

@@ -14,7 +14,7 @@ db_path = "./data/kcst.db"
 
 [retention]
 # Minimum TTL for largest files (default: "1h")
-min_ttl = "1h"
+min_ttl = "3h"
 
 # Maximum TTL for smallest files (default: "28d")
 max_ttl = "28d"
