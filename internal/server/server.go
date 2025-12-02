@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/keircn/kcst/internal/config"
 	"github.com/keircn/kcst/internal/handlers"
@@ -44,6 +45,8 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			h.Root(w, r)
+		} else if strings.HasPrefix(r.URL.Path, "/f/") {
+			h.Preview(w, r)
 		} else {
 			h.ServeFile(w, r)
 		}

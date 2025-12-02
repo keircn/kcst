@@ -27,10 +27,10 @@ func NewStore(dir string, db *storage.DB, cleanupInterval time.Duration) (*Store
 	return &Store{dir: dir, db: db, cleanupInterval: cleanupInterval}, nil
 }
 
-func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string, error) {
+func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string, *storage.FileMetadata, error) {
 	randName, err := generateRandomName()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	ext := getExtension(header.Filename)
@@ -38,13 +38,13 @@ func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string,
 
 	dst, err := os.Create(filepath.Join(s.dir, filename))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer dst.Close()
 
 	size, err := io.Copy(dst, file)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	meta := &storage.FileMetadata{
@@ -56,10 +56,10 @@ func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string,
 		UploadedAt:   time.Now(),
 	}
 	if err := s.db.SaveMetadata(meta); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return filename, nil
+	return filename, meta, nil
 }
 
 func (s *Store) Get(filename string) (*os.File, *storage.FileMetadata, error) {
