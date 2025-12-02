@@ -3,6 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/keircn/kcst/internal/models"
 	"github.com/keircn/kcst/internal/templates"
@@ -12,12 +14,14 @@ import (
 type Handler struct {
 	templates *templates.Templates
 	store     *upload.Store
+	baseURL   string
 }
 
-func New(t *templates.Templates, s *upload.Store) *Handler {
+func New(t *templates.Templates, s *upload.Store, baseURL string) *Handler {
 	return &Handler{
 		templates: t,
 		store:     s,
+		baseURL:   strings.TrimSuffix(baseURL, "/"),
 	}
 }
 
@@ -32,17 +36,22 @@ func (h *Handler) Root(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getBaseURL(r *http.Request) string {
+	if h.baseURL != "" {
+		return h.baseURL
+	}
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
-	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
+	return fmt.Sprintf("%s://%s", scheme, r.Host)
+}
 
+func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
 	data := models.PageData{
 		Title:   "KCST",
 		Message: "Temporary file hosting.",
-		BaseURL: baseURL,
+		BaseURL: h.getBaseURL(r),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -71,5 +80,31 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, "%s\n", filename)
+	fmt.Fprintf(w, "%s/%s\n", h.getBaseURL(r), filename)
+}
+
+func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	filename := strings.TrimPrefix(r.URL.Path, "/")
+	if filename == "" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	filename = filepath.Base(filename)
+
+	file, meta, err := h.store.Get(filename)
+	if err != nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Type", meta.ContentType)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", meta.Size))
+	http.ServeContent(w, r, filename, meta.UploadedAt, file)
 }
