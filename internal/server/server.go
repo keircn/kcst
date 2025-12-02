@@ -39,9 +39,15 @@ func New(cfg *config.Config) (*Server, error) {
 		db.Close()
 		return nil, err
 	}
-	h := handlers.New(tmpl, store)
+	h := handlers.New(tmpl, store, cfg.Server.BaseURL)
 
-	mux.HandleFunc("/", h.Root)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			h.Root(w, r)
+		} else {
+			h.ServeFile(w, r)
+		}
+	})
 
 	return &Server{
 		addr:        cfg.Server.Address,

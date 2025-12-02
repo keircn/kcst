@@ -62,6 +62,26 @@ func (s *Store) Save(file multipart.File, header *multipart.FileHeader) (string,
 	return filename, nil
 }
 
+func (s *Store) Get(filename string) (*os.File, *storage.FileMetadata, error) {
+	meta, err := s.db.GetMetadataByStoredName(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+	if meta == nil {
+		return nil, nil, os.ErrNotExist
+	}
+	if meta.IsExpired() {
+		return nil, nil, os.ErrNotExist
+	}
+
+	file, err := os.Open(filepath.Join(s.dir, meta.StoredName))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, meta, nil
+}
+
 func (s *Store) Cleanup() error {
 	expired, err := s.db.GetExpired()
 	if err != nil {
