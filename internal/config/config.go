@@ -16,6 +16,7 @@ type Config struct {
 
 type ServerConfig struct {
 	Address string
+	BaseURL string
 }
 
 type StorageConfig struct {
