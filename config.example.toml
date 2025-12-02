@@ -5,6 +5,9 @@
 # Address to listen on (default: ":8080")
 address = ":8080"
 
+# Base URL for generated file links (optional, auto-detected if not set)
+# base_url = "https://example.com"
+
 [storage]
 # Directory to store uploaded files (default: "./uploads")
 upload_dir = "./uploads"
