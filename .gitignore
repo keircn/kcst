@@ -3,5 +3,5 @@
 !*.*
 
 config.toml
-!internal/config
+!internal
 !config.example.toml
