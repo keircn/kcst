@@ -89,6 +89,8 @@ func Load(path string) (*Config, error) {
 			switch key {
 			case "address":
 				cfg.Server.Address = value
+			case "base_url":
+				cfg.Server.BaseURL = value
 			}
 		case "storage":
 			switch key {
