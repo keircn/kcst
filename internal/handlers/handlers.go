@@ -167,7 +167,7 @@ func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
 
 	data := models.FilePreviewData{
 		Title:        fmt.Sprintf("%s - kcst", meta.OriginalName),
-		Description:  fmt.Sprintf("File %s\\n(%s)\\n\\nExpires %s", meta.StoredName, formatSize(meta.Size), meta.ExpiresAt().Format("Jan 02, 2006")),
+		Description:  fmt.Sprintf("%s\n%s\nExpires %s", meta.StoredName, formatSize(meta.Size), meta.ExpiresAt().Format("Jan 02, 2006")),
 		Filename:     filename,
 		OriginalName: meta.OriginalName,
 		Size:         meta.Size,
